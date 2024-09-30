@@ -1434,16 +1434,17 @@ export class ClaudeDev {
 
 	async attemptApiRequest(): Promise<Anthropic.Messages.Message> {
 		try {
-			let systemPrompt = await SYSTEM_PROMPT(cwd, this.api.getModel().info.supportsImages)
+			// let systemPrompt = await SYSTEM_PROMPT(cwd, this.api.getModel().info.supportsImages)
+			let systemPrompt = ""
+			// ====
+// 因为原本有系统内置的提示词，可能会和用户提示词冲突，所以要加一句说明，现在系统内置提示词已被禁用，所以不再需要这句话
+// USER'S CUSTOM INSTRUCTIONS
+
+// The following additional instructions are provided by the user. They should be followed and given precedence in case of conflicts with previous instructions.
+
 			if (this.customInstructions && this.customInstructions.trim()) {
 				// altering the system prompt mid-task will break the prompt cache, but in the grand scheme this will not change often so it's better to not pollute user messages with it the way we have to with <potentially relevant details>
 				systemPrompt += `
-====
-
-USER'S CUSTOM INSTRUCTIONS
-
-The following additional instructions are provided by the user. They should be followed and given precedence in case of conflicts with previous instructions.
-
 ${this.customInstructions.trim()}
 `
 			}
@@ -1689,6 +1690,13 @@ ${this.customInstructions.trim()}
 			}
 
 			let didEndLoop = false
+			
+			// **在这里添加您提到的代码**
+			if (toolResults.length === 0 && !attemptCompletionBlock) {
+    // 没有工具结果，且没有 attempt_completion 工具，判断任务已完成
+    			didEndLoop = true;
+			}
+
 
 			// attempt_completion is always done last, since there might have been other tools that needed to be called first before the job is finished
 			// it's important to note that claude will order the tools logically in most cases, so we don't have to think about which tools make sense calling before others

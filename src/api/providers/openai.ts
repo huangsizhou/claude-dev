@@ -35,10 +35,17 @@ export class OpenAiHandler implements ApiHandler {
 		messages: Anthropic.Messages.MessageParam[],
 		tools: Anthropic.Messages.Tool[]
 	): Promise<ApiHandlerMessageResponse> {
-		const openAiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
-			{ role: "system", content: systemPrompt },
-			...convertToOpenAiMessages(messages),
-		]
+		// 防止上下文过长
+		  const openAiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+			...(systemPrompt.trim()
+			  ? [{ role: "system", content: systemPrompt } as OpenAI.Chat.ChatCompletionMessageParam]
+			  : []),
+			...convertToOpenAiMessages(
+			  messages.length > 8 ? messages.slice(-8) : messages
+			),
+		];
+
+		  
 		const openAiTools: OpenAI.Chat.ChatCompletionTool[] = tools.map((tool) => ({
 			type: "function",
 			function: {
@@ -51,9 +58,9 @@ export class OpenAiHandler implements ApiHandler {
 			model: this.options.openAiModelId ?? "",
 			messages: openAiMessages,
 			temperature: 0.2,
-			tools: openAiTools,
-			tool_choice: "auto",
+			...(this.options.openAiModelId?.includes("claude") && this.options.openAiBaseUrl?.includes("deepbricks") ? {} : { tools: openAiTools, tool_choice: "auto" }),
 		}
+
 		const completion = await this.client.chat.completions.create(createParams)
 		const errorMessage = (completion as any).error?.message
 		if (errorMessage) {
